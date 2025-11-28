@@ -1,3 +1,5 @@
+<!-- This is the old index.html file that will be removed. -->
+<!-- You can add new content here after deletion. -->
 <!DOCTYPE html>
 <html>
 <head>
@@ -125,6 +127,15 @@
       display: none;
     }
 
+    .start-btn {
+        margin-top: 8px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        border: none;
+        cursor: pointer;
+        font-size: 0.95rem;
+    }
+
     .overlay-inner {
       background: #111623;
       padding: 16px;
@@ -205,12 +216,13 @@
   <!-- Game overlay -->
   <div class="overlay hidden" id="gameOverlay">
     <div class="overlay-inner">
-      <div class="overlay-header">
-        <div>Flappy Boys – prototype</div>
-        <button class="close-btn" id="closeGameBtn">&times;</button>
-      </div>
-      <canvas id="gameCanvas" width="400" height="600"></canvas>
-      <div class="small-hint">Trykk SPACE eller klikk for å hoppe</div>
+        <div class="overlay-header">
+            <div>Flappy Boys – prototype</div>
+            <button class="close-btn" id="closeGameBtn">&times;</button>
+        </div>
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        <div class="small-hint">Trykk SPACE eller klikk for å hoppe</div>
+        <button id="startGameBtn" class="start-btn">Start / Restart</button>
     </div>
   </div>
 
@@ -219,7 +231,7 @@
     // 1) COUNTDOWN (set your date)
     // ===============================
     // Example: 24 April 2026 18:00 (Norway time-ish)
-    const targetDate = new Date("2026-04-24T18:00:00");
+    const targetDate = new Date("2026-04-24T09:00:00");
 
     function updateCountdown() {
       const now = new Date();
@@ -250,167 +262,147 @@
 
     // ===============================
     // 2) OPEN/CLOSE GAME OVERLAY
-    ===============================
+    // ===============================
     const birdButton = document.getElementById("birdButton");
     const gameOverlay = document.getElementById("gameOverlay");
     const closeGameBtn = document.getElementById("closeGameBtn");
+    const startGameBtn = document.getElementById("startGameBtn");
 
+    // Open overlay, show idle bird
     birdButton.addEventListener("click", () => {
-      gameOverlay.classList.remove("hidden");
-      startGame();
+    gameOverlay.classList.remove("hidden");
+    stopGame();     // make sure nothing is running
+    resetGame();    // reset positions & pipes
+    draw();         // draw initial state
     });
 
+    // Close overlay, stop game loop
     closeGameBtn.addEventListener("click", () => {
-      gameOverlay.classList.add("hidden");
-      stopGame();
+    gameOverlay.classList.add("hidden");
+    stopGame();
+    });
+
+    // Start / restart round
+    startGameBtn.addEventListener("click", () => {
+    startGame();
     });
 
     // ===============================
-    // 3) SIMPLE FLAPPY GAME
+    // 3) IMPROVED FLAPPY GAME (keeps overlay/countdown)
     // ===============================
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    let birdX = 80;
-    let birdY = 300;
-    let birdVelY = 0;
-    let gravity = 0.4;
-    let jumpStrength = -7;
+    const GRAVITY = 0.4;
+    const JUMP_FORCE = -7.5;
+    const PIPE_SPEED = 2.5;
+    const PIPE_GAP = 140;
+    const PIPE_WIDTH = 70;
+    const PIPE_INTERVAL = 1500; // ms
+
+    const bird = {
+      x: 80,
+      y: canvas.height / 2,
+      radius: 14,
+      velocity: 0
+    };
 
     let pipes = [];
-    let pipeWidth = 60;
-    let pipeGap = 150;
-    let pipeSpeed = 2;
-    let spawnInterval = 1500; // ms
-    let lastSpawnTime = 0;
-
+    let lastPipeTime = 0;
     let score = 0;
-    let gameRunning = false;
-    let gameFrameId = null;
+    let bestScore = 0;
+
+    let gameState = "start"; // start | running | gameover
     let lastTime = 0;
+    let rafId = null;
 
     function resetGame() {
-      birdX = 80;
-      birdY = 300;
-      birdVelY = 0;
+      bird.x = 80;
+      bird.y = canvas.height / 2;
+      bird.velocity = 0;
       pipes = [];
       score = 0;
-      lastSpawnTime = 0;
+      lastPipeTime = 0;
       lastTime = 0;
+      gameState = "start";
     }
 
     function spawnPipe() {
-      const minY = 100;
-      const maxY = canvas.height - 100;
-      const gapY = Math.floor(Math.random() * (maxY - minY)) + minY;
+      const minTop = 50;
+      const maxTop = canvas.height - 50 - PIPE_GAP - 80; // leave room for ground
+      const topHeight = Math.floor(Math.random() * (maxTop - minTop + 1)) + minTop;
 
       pipes.push({
-        x: canvas.width + 40,
-        gapY: gapY,
-        counted: false // for scoring when passed
+        x: canvas.width,
+        top: topHeight,
+        width: PIPE_WIDTH,
+        gap: PIPE_GAP,
+        scored: false
       });
     }
 
-    function flap() {
-      if (!gameRunning) return;
-      birdVelY = jumpStrength;
-    }
+    function update(deltaTime) {
+      if (gameState !== "running") return;
 
-    document.addEventListener("keydown", (e) => {
-      if (e.code === "Space") {
-        e.preventDefault();
-        flap();
-      }
-    });
+      bird.velocity += GRAVITY;
+      bird.y += bird.velocity;
 
-    canvas.addEventListener("mousedown", () => {
-      flap();
-    });
-
-    function startGame() {
-      resetGame();
-      gameRunning = true;
-      lastTime = performance.now();
-      gameFrameId = requestAnimationFrame(gameLoop);
-    }
-
-    function stopGame() {
-      gameRunning = false;
-      if (gameFrameId) {
-        cancelAnimationFrame(gameFrameId);
-        gameFrameId = null;
-      }
-    }
-
-    function gameLoop(timestamp) {
-      if (!gameRunning) return;
-
-      const dt = timestamp - lastTime;
-      lastTime = timestamp;
-
-      // Spawn pipes
-      if (lastSpawnTime === 0) lastSpawnTime = timestamp;
-      if (timestamp - lastSpawnTime > spawnInterval) {
+      if (lastPipeTime > PIPE_INTERVAL) {
         spawnPipe();
-        lastSpawnTime = timestamp;
+        lastPipeTime = 0;
+      } else {
+        lastPipeTime += deltaTime;
       }
 
-      update(dt);
-      draw();
+      for (let i = pipes.length - 1; i >= 0; i--) {
+        const pipe = pipes[i];
+        pipe.x -= PIPE_SPEED;
 
-      gameFrameId = requestAnimationFrame(gameLoop);
-    }
-
-    function update(dt) {
-      // Bird physics
-      birdVelY += gravity;
-      birdY += birdVelY;
-
-      // Move pipes
-      for (let i = 0; i < pipes.length; i++) {
-        pipes[i].x -= pipeSpeed;
-      }
-
-      // Remove old pipes
-      pipes = pipes.filter(p => p.x + pipeWidth > 0);
-
-      // Collision and scoring
-      for (let i = 0; i < pipes.length; i++) {
-        const p = pipes[i];
-
-        // Score when passing
-        if (!p.counted && p.x + pipeWidth < birdX) {
-          p.counted = true;
+        if (!pipe.scored && pipe.x + pipe.width < bird.x) {
+          pipe.scored = true;
           score++;
+          if (score > bestScore) bestScore = score;
         }
 
-        const inPipeX = birdX + 20 > p.x && birdX - 20 < p.x + pipeWidth;
-        const inGapY = birdY - 20 > p.gapY - pipeGap / 2 && birdY + 20 < p.gapY + pipeGap / 2;
-
-        if (inPipeX && !inGapY) {
-          // Hit pipe
-          gameOver();
-        }
+        if (pipe.x + pipe.width < 0) pipes.splice(i, 1);
       }
 
-      // Hit floor or ceiling
-      if (birdY + 20 > canvas.height || birdY - 20 < 0) {
-        gameOver();
+      if (checkCollision()) {
+        gameState = "gameover";
+      }
+
+      if (bird.y + bird.radius > canvas.height || bird.y - bird.radius < 0) {
+        gameState = "gameover";
       }
     }
 
-    function gameOver() {
-      gameRunning = false;
-      setTimeout(() => {
-        alert("Game over! Score: " + score);
-        startGame(); // restart automatically
-      }, 50);
+    function checkCollision() {
+      for (const pipe of pipes) {
+        const birdLeft = bird.x - bird.radius;
+        const birdRight = bird.x + bird.radius;
+        const birdTop = bird.y - bird.radius;
+        const birdBottom = bird.y + bird.radius;
+
+        const pipeLeft = pipe.x;
+        const pipeRight = pipe.x + pipe.width;
+        const gapTop = pipe.top;
+        const gapBottom = pipe.top + pipe.gap;
+
+        const overlapsHorizontal = birdRight > pipeLeft && birdLeft < pipeRight;
+        const hitsTopPipe = birdTop < gapTop;
+        const hitsBottomPipe = birdBottom > gapBottom;
+
+        if (overlapsHorizontal && (hitsTopPipe || hitsBottomPipe)) {
+          return true;
+        }
+      }
+      return false;
     }
 
     function draw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Background (simple)
+      // Sky
       ctx.fillStyle = "#70c5ce";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -419,30 +411,135 @@
       ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
 
       // Bird
-      ctx.fillStyle = "#ffdd33";
+      ctx.save();
+      ctx.translate(bird.x, bird.y);
+      ctx.rotate(Math.min(Math.max(bird.velocity * 0.05, -0.5), 0.7));
+      ctx.fillStyle = "#ffdd00";
       ctx.beginPath();
-      ctx.arc(birdX, birdY, 20, 0, Math.PI * 2);
+      ctx.arc(0, 0, bird.radius, 0, Math.PI * 2);
       ctx.fill();
 
+      // Eye
+      ctx.fillStyle = "#fff";
+      ctx.beginPath();
+      ctx.arc(5, -5, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = "#000";
+      ctx.beginPath();
+      ctx.arc(6, -5, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Beak
+      ctx.fillStyle = "#ff8800";
+      ctx.beginPath();
+      ctx.moveTo(bird.radius, 0);
+      ctx.lineTo(bird.radius + 8, 4);
+      ctx.lineTo(bird.radius, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+
       // Pipes
-      ctx.fillStyle = "#5ec639";
-      for (let i = 0; i < pipes.length; i++) {
-        const p = pipes[i];
+      for (const pipe of pipes) {
+        ctx.fillStyle = "#39c000";
+        ctx.fillRect(pipe.x, 0, pipe.width, pipe.top);
+        ctx.fillRect(pipe.x, pipe.top + pipe.gap, pipe.width, canvas.height - (pipe.top + pipe.gap) - 80);
 
-        // Top pipe
-        const topBottom = p.gapY - pipeGap / 2;
-        ctx.fillRect(p.x, 0, pipeWidth, topBottom);
-
-        // Bottom pipe
-        const bottomTop = p.gapY + pipeGap / 2;
-        ctx.fillRect(p.x, bottomTop, pipeWidth, canvas.height - bottomTop - 80);
+        ctx.fillStyle = "#2f9900";
+        ctx.fillRect(pipe.x - 2, pipe.top - 18, pipe.width + 4, 18);
+        ctx.fillRect(pipe.x - 2, pipe.top + pipe.gap, pipe.width + 4, 18);
       }
 
-      // Score text
-      ctx.fillStyle = "#fff";
-      ctx.font = "24px Arial";
-      ctx.fillText("Score: " + score, 10, 30);
+      // Score
+      ctx.fillStyle = "#000";
+      ctx.font = "bold 32px system-ui, sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(score.toString(), canvas.width / 2, 60);
+
+      // Best score
+      ctx.font = "bold 16px system-ui, sans-serif";
+      ctx.textAlign = "left";
+      ctx.fillText("Best: " + bestScore, 10, 25);
+
+      if (gameState === "start") {
+        drawMessage("Click or SPACE to start", "Avoid the pipes!");
+      } else if (gameState === "gameover") {
+        drawMessage("Game Over", "Click or SPACE to restart");
+      }
     }
+
+    function drawMessage(title, subtitle) {
+      ctx.save();
+      ctx.fillStyle = "rgba(0,0,0,0.6)";
+      ctx.fillRect(40, canvas.height / 2 - 80, canvas.width - 80, 140);
+
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2;
+      ctx.strokeRect(40, canvas.height / 2 - 80, canvas.width - 80, 140);
+
+      ctx.fillStyle = "#fff";
+      ctx.textAlign = "center";
+      ctx.font = "bold 24px system-ui, sans-serif";
+      ctx.fillText(title, canvas.width / 2, canvas.height / 2 - 30);
+      ctx.font = "16px system-ui, sans-serif";
+      ctx.fillText(subtitle, canvas.width / 2, canvas.height / 2 + 10);
+      ctx.restore();
+    }
+
+    function gameLoop(timestamp) {
+      if (!lastTime) lastTime = timestamp;
+      const deltaTime = timestamp - lastTime;
+      lastTime = timestamp;
+
+      update(deltaTime);
+      draw();
+
+      rafId = requestAnimationFrame(gameLoop);
+    }
+
+    function flap() {
+      if (gameState === "start") {
+        gameState = "running";
+        bird.velocity = JUMP_FORCE;
+      } else if (gameState === "running") {
+        bird.velocity = JUMP_FORCE;
+      } else if (gameState === "gameover") {
+        resetGame();
+      }
+    }
+
+    window.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        flap();
+      }
+    });
+
+    canvas.addEventListener("mousedown", flap);
+    canvas.addEventListener("touchstart", function (e) {
+      e.preventDefault();
+      flap();
+    });
+
+    function startGame() {
+      stopGame();
+      resetGame();
+      gameState = "running";
+      lastTime = 0;
+      lastPipeTime = 0;
+      rafId = requestAnimationFrame(gameLoop);
+    }
+
+    function stopGame() {
+      if (rafId) {
+        cancelAnimationFrame(rafId);
+        rafId = null;
+      }
+    }
+
+    // draw initial state
+    resetGame();
+    draw();
   </script>
 </body>
 </html>
