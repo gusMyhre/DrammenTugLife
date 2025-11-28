@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Flappy Boys</title>
+  <style>
+    canvas { 
+      border: 2px solid black; 
+      display: block; 
+      margin: 0 auto; 
+    }
+  </style>
+</head>
+<body>
+
+<h1 style="text-align:center;">Flappy Boys</h1>
+<canvas id="gameCanvas" width="400" height="600"></canvas>
+
+<script>
+  // SIMPLE GAME TEST
+  const canvas = document.getElementById("gameCanvas");
+  const ctx = canvas.getContext("2d");
+
+  let y = 300;
+  function gameLoop() {
+    ctx.clearRect(0,0,400,600);
+    ctx.fillStyle = "red";
+    ctx.fillRect(180, y, 40, 40);
+    y += 1;  // gravity
+    requestAnimationFrame(gameLoop);
+  }
+  gameLoop();
+</script>
+
+</body>
+</html>
