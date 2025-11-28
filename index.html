@@ -1,35 +1,448 @@
 <!DOCTYPE html>
 <html>
 <head>
+  <meta charset="UTF-8" />
   <title>Flappy Boys</title>
   <style>
-    canvas { 
-      border: 2px solid black; 
-      display: block; 
-      margin: 0 auto; 
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      background: #070b18;
+      color: #fff;
+    }
+
+    .container {
+      max-width: 800px;
+      margin: 40px auto;
+      text-align: center;
+      padding: 0 16px;
+    }
+
+    h1 {
+      font-size: 2.5rem;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      opacity: 0.8;
+      margin-bottom: 24px;
+    }
+
+    .group-image {
+      width: 100%;
+      max-width: 600px;
+      height: 300px;
+      object-fit: cover;
+      border-radius: 16px;
+      border: 3px solid #fff;
+      margin-bottom: 24px;
+      background: #222;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: #777;
+      font-size: 0.9rem;
+    }
+
+    /* Countdown */
+    .countdown-box {
+      display: inline-block;
+      padding: 12px 20px;
+      border-radius: 999px;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      margin-bottom: 24px;
+    }
+
+    .countdown-label {
+      font-size: 0.9rem;
+      opacity: 0.8;
+      margin-bottom: 6px;
+    }
+
+    .countdown-time {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      font-size: 1.1rem;
+    }
+
+    .countdown-part span {
+      font-weight: bold;
+      display: block;
+    }
+
+    /* Bird button */
+    .bird-wrapper {
+      margin-top: 30px;
+      margin-bottom: 8px;
+      position: relative;
+      height: 120px;
+    }
+
+    .bird-button {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      background: #ffdd33;
+      border: 3px solid #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      cursor: pointer;
+      position: absolute;
+      left: calc(50% - 30px);
+      top: 30px;
+      animation: fly 3s ease-in-out infinite alternate;
+      box-shadow: 0 0 16px rgba(255, 221, 51, 0.7);
+      user-select: none;
+    }
+
+    @keyframes fly {
+      0%   { transform: translate(-80px, -10px) rotate(-10deg); }
+      50%  { transform: translate(0px, 0px) rotate(0deg); }
+      100% { transform: translate(80px, -15px) rotate(10deg); }
+    }
+
+    .bird-caption {
+      opacity: 0.8;
+      font-size: 0.95rem;
+    }
+
+    /* Game overlay */
+    .overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .overlay.hidden {
+      display: none;
+    }
+
+    .overlay-inner {
+      background: #111623;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.2);
+      box-shadow: 0 0 24px rgba(0,0,0,0.6);
+    }
+
+    .overlay-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      color: #fff;
+    }
+
+    .close-btn {
+      background: transparent;
+      border: 1px solid rgba(255,255,255,0.4);
+      color: #fff;
+      border-radius: 50%;
+      width: 28px;
+      height: 28px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    canvas {
+      border-radius: 8px;
+      background: #70c5ce;
+      display: block;
+    }
+
+    .small-hint {
+      font-size: 0.85rem;
+      opacity: 0.8;
+      margin-top: 4px;
+      text-align: right;
     }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>Flappy Boys</h1>
+    <p class="subtitle">Blåtur countdown &amp; secret game for the boys 🐦</p>
 
-<h1 style="text-align:center;">Flappy Boys</h1>
-<canvas id="gameCanvas" width="400" height="600"></canvas>
+    <!-- Replace this with a real image later -->
+    <div class="group-image">
+      Group photo goes here (add a real image file later)
+    </div>
 
-<script>
-  // SIMPLE GAME TEST
-  const canvas = document.getElementById("gameCanvas");
-  const ctx = canvas.getContext("2d");
+    <!-- Countdown -->
+    <div class="countdown-box">
+      <div class="countdown-label">Blåtur starter om:</div>
+      <div class="countdown-time">
+        <div class="countdown-part">
+          <span id="days">0</span>d
+        </div>
+        <div class="countdown-part">
+          <span id="hours">0</span>t
+        </div>
+        <div class="countdown-part">
+          <span id="minutes">0</span>m
+        </div>
+        <div class="countdown-part">
+          <span id="seconds">0</span>s
+        </div>
+      </div>
+    </div>
 
-  let y = 300;
-  function gameLoop() {
-    ctx.clearRect(0,0,400,600);
-    ctx.fillStyle = "red";
-    ctx.fillRect(180, y, 40, 40);
-    y += 1;  // gravity
-    requestAnimationFrame(gameLoop);
-  }
-  gameLoop();
-</script>
+    <!-- Bird button -->
+    <div class="bird-wrapper">
+      <div class="bird-button" id="birdButton">🐦</div>
+    </div>
+    <p class="bird-caption">Klikk på fuglen for å spille Flappy Boys</p>
+  </div>
 
+  <!-- Game overlay -->
+  <div class="overlay hidden" id="gameOverlay">
+    <div class="overlay-inner">
+      <div class="overlay-header">
+        <div>Flappy Boys – prototype</div>
+        <button class="close-btn" id="closeGameBtn">&times;</button>
+      </div>
+      <canvas id="gameCanvas" width="400" height="600"></canvas>
+      <div class="small-hint">Trykk SPACE eller klikk for å hoppe</div>
+    </div>
+  </div>
+
+  <script>
+    // ===============================
+    // 1) COUNTDOWN (set your date)
+    // ===============================
+    // Example: 24 April 2026 18:00 (Norway time-ish)
+    const targetDate = new Date("2026-04-24T18:00:00");
+
+    function updateCountdown() {
+      const now = new Date();
+      const diff = targetDate - now;
+
+      if (diff <= 0) {
+        document.getElementById("days").innerText = 0;
+        document.getElementById("hours").innerText = 0;
+        document.getElementById("minutes").innerText = 0;
+        document.getElementById("seconds").innerText = 0;
+        return;
+      }
+
+      const seconds = Math.floor(diff / 1000);
+      const days = Math.floor(seconds / (60 * 60 * 24));
+      const hours = Math.floor((seconds % (60 * 60 * 24)) / (60 * 60));
+      const minutes = Math.floor((seconds % (60 * 60)) / 60);
+      const secs = seconds % 60;
+
+      document.getElementById("days").innerText = days;
+      document.getElementById("hours").innerText = hours;
+      document.getElementById("minutes").innerText = minutes;
+      document.getElementById("seconds").innerText = secs;
+    }
+
+    updateCountdown();
+    setInterval(updateCountdown, 1000);
+
+    // ===============================
+    // 2) OPEN/CLOSE GAME OVERLAY
+    ===============================
+    const birdButton = document.getElementById("birdButton");
+    const gameOverlay = document.getElementById("gameOverlay");
+    const closeGameBtn = document.getElementById("closeGameBtn");
+
+    birdButton.addEventListener("click", () => {
+      gameOverlay.classList.remove("hidden");
+      startGame();
+    });
+
+    closeGameBtn.addEventListener("click", () => {
+      gameOverlay.classList.add("hidden");
+      stopGame();
+    });
+
+    // ===============================
+    // 3) SIMPLE FLAPPY GAME
+    // ===============================
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    let birdX = 80;
+    let birdY = 300;
+    let birdVelY = 0;
+    let gravity = 0.4;
+    let jumpStrength = -7;
+
+    let pipes = [];
+    let pipeWidth = 60;
+    let pipeGap = 150;
+    let pipeSpeed = 2;
+    let spawnInterval = 1500; // ms
+    let lastSpawnTime = 0;
+
+    let score = 0;
+    let gameRunning = false;
+    let gameFrameId = null;
+    let lastTime = 0;
+
+    function resetGame() {
+      birdX = 80;
+      birdY = 300;
+      birdVelY = 0;
+      pipes = [];
+      score = 0;
+      lastSpawnTime = 0;
+      lastTime = 0;
+    }
+
+    function spawnPipe() {
+      const minY = 100;
+      const maxY = canvas.height - 100;
+      const gapY = Math.floor(Math.random() * (maxY - minY)) + minY;
+
+      pipes.push({
+        x: canvas.width + 40,
+        gapY: gapY,
+        counted: false // for scoring when passed
+      });
+    }
+
+    function flap() {
+      if (!gameRunning) return;
+      birdVelY = jumpStrength;
+    }
+
+    document.addEventListener("keydown", (e) => {
+      if (e.code === "Space") {
+        e.preventDefault();
+        flap();
+      }
+    });
+
+    canvas.addEventListener("mousedown", () => {
+      flap();
+    });
+
+    function startGame() {
+      resetGame();
+      gameRunning = true;
+      lastTime = performance.now();
+      gameFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function stopGame() {
+      gameRunning = false;
+      if (gameFrameId) {
+        cancelAnimationFrame(gameFrameId);
+        gameFrameId = null;
+      }
+    }
+
+    function gameLoop(timestamp) {
+      if (!gameRunning) return;
+
+      const dt = timestamp - lastTime;
+      lastTime = timestamp;
+
+      // Spawn pipes
+      if (lastSpawnTime === 0) lastSpawnTime = timestamp;
+      if (timestamp - lastSpawnTime > spawnInterval) {
+        spawnPipe();
+        lastSpawnTime = timestamp;
+      }
+
+      update(dt);
+      draw();
+
+      gameFrameId = requestAnimationFrame(gameLoop);
+    }
+
+    function update(dt) {
+      // Bird physics
+      birdVelY += gravity;
+      birdY += birdVelY;
+
+      // Move pipes
+      for (let i = 0; i < pipes.length; i++) {
+        pipes[i].x -= pipeSpeed;
+      }
+
+      // Remove old pipes
+      pipes = pipes.filter(p => p.x + pipeWidth > 0);
+
+      // Collision and scoring
+      for (let i = 0; i < pipes.length; i++) {
+        const p = pipes[i];
+
+        // Score when passing
+        if (!p.counted && p.x + pipeWidth < birdX) {
+          p.counted = true;
+          score++;
+        }
+
+        const inPipeX = birdX + 20 > p.x && birdX - 20 < p.x + pipeWidth;
+        const inGapY = birdY - 20 > p.gapY - pipeGap / 2 && birdY + 20 < p.gapY + pipeGap / 2;
+
+        if (inPipeX && !inGapY) {
+          // Hit pipe
+          gameOver();
+        }
+      }
+
+      // Hit floor or ceiling
+      if (birdY + 20 > canvas.height || birdY - 20 < 0) {
+        gameOver();
+      }
+    }
+
+    function gameOver() {
+      gameRunning = false;
+      setTimeout(() => {
+        alert("Game over! Score: " + score);
+        startGame(); // restart automatically
+      }, 50);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Background (simple)
+      ctx.fillStyle = "#70c5ce";
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      // Ground
+      ctx.fillStyle = "#ded895";
+      ctx.fillRect(0, canvas.height - 80, canvas.width, 80);
+
+      // Bird
+      ctx.fillStyle = "#ffdd33";
+      ctx.beginPath();
+      ctx.arc(birdX, birdY, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Pipes
+      ctx.fillStyle = "#5ec639";
+      for (let i = 0; i < pipes.length; i++) {
+        const p = pipes[i];
+
+        // Top pipe
+        const topBottom = p.gapY - pipeGap / 2;
+        ctx.fillRect(p.x, 0, pipeWidth, topBottom);
+
+        // Bottom pipe
+        const bottomTop = p.gapY + pipeGap / 2;
+        ctx.fillRect(p.x, bottomTop, pipeWidth, canvas.height - bottomTop - 80);
+      }
+
+      // Score text
+      ctx.fillStyle = "#fff";
+      ctx.font = "24px Arial";
+      ctx.fillText("Score: " + score, 10, 30);
+    }
+  </script>
 </body>
 </html>
