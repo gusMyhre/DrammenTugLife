@@ -293,9 +293,9 @@
     const canvas = document.getElementById("gameCanvas");
     const ctx = canvas.getContext("2d");
 
-    const GRAVITY = 0.4;
-    const JUMP_FORCE = -7.5;
-    const PIPE_SPEED = 2.5;
+    const GRAVITY = 1200;         // pixels per second^2
+    const JUMP_FORCE = -400;    // pixels per second
+    const PIPE_SPEED = 180;     // pixels per second
     const PIPE_GAP = 140;
     const PIPE_WIDTH = 70;
     const PIPE_INTERVAL = 1500; // ms
@@ -344,8 +344,11 @@
     function update(deltaTime) {
       if (gameState !== "running") return;
 
-      bird.velocity += GRAVITY;
-      bird.y += bird.velocity;
+      // dt is already passed into update(dt)
+      const dtSeconds = deltaTime / 1000; // convert ms to seconds
+
+      bird.velocity += GRAVITY * dtSeconds;
+      bird.y += bird.velocity * dtSeconds;
 
       if (lastPipeTime > PIPE_INTERVAL) {
         spawnPipe();
@@ -356,7 +359,7 @@
 
       for (let i = pipes.length - 1; i >= 0; i--) {
         const pipe = pipes[i];
-        pipe.x -= PIPE_SPEED;
+        pipe.x -= PIPE_SPEED * dtSeconds;
 
         if (!pipe.scored && pipe.x + pipe.width < bird.x) {
           pipe.scored = true;
@@ -364,7 +367,9 @@
           if (score > bestScore) bestScore = score;
         }
 
-        if (pipe.x + pipe.width < 0) pipes.splice(i, 1);
+        if (pipe.x + pipe.width < 0) {
+          pipes.splice(i, 1);
+          }
       }
 
       if (checkCollision()) {
