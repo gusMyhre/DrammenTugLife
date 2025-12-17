@@ -1,0 +1,128 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Flappy Boys Admin</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+    .card { border: 1px solid #333; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+    input, button { font-size: 16px; padding: 10px 12px; }
+    input { width: 100%; margin: 8px 0; }
+    button { cursor: pointer; }
+    .row { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: end; }
+    .muted { opacity: 0.7; }
+    pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <h1>Admin</h1>
+
+  <div class="card" id="authCard">
+    <h2>Login (magic link)</h2>
+    <p class="muted">Only invited users can log in.</p>
+    <input id="loginEmail" type="email" placeholder="your@email.com" />
+    <button id="sendLinkBtn">Send magic link</button>
+    <p id="authMsg"></p>
+  </div>
+
+  <div class="card" id="inviteCard" style="display:none;">
+    <h2>Invite a user</h2>
+    <div class="row">
+      <div>
+        <label>Email</label>
+        <input id="inviteEmail" type="email" placeholder="friend@email.com" />
+      </div>
+      <button id="inviteBtn">Invite</button>
+    </div>
+    <p id="inviteMsg"></p>
+
+    <hr />
+    <button id="logoutBtn">Log out</button>
+  </div>
+
+  <pre id="debug"></pre>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL = "https://mzfonlfsfwvnkqqvrfzw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0";
+    const FUNCTIONS_BASE = SUPABASE_URL + "/functions/v1";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    const authCard = document.getElementById("authCard");
+    const inviteCard = document.getElementById("inviteCard");
+    const authMsg = document.getElementById("authMsg");
+    const inviteMsg = document.getElementById("inviteMsg");
+    const debug = document.getElementById("debug");
+
+    async function refreshUI() {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        authCard.style.display = "";
+        inviteCard.style.display = "none";
+        return;
+      }
+
+      // Optional: show your profile role to confirm admin
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("role, nickname, coins")
+        .eq("user_id", session.user.id)
+        .single();
+
+      debug.textContent = JSON.stringify({ user: session.user.email, profile, error: error?.message }, null, 2);
+
+      authCard.style.display = "none";
+      inviteCard.style.display = "";
+    }
+
+    document.getElementById("sendLinkBtn").addEventListener("click", async () => {
+      authMsg.textContent = "";
+      const email = document.getElementById("loginEmail").value.trim();
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.href }
+      });
+
+      authMsg.textContent = error ? error.message : "Magic link sent (check spam too).";
+    });
+
+    document.getElementById("inviteBtn").addEventListener("click", async () => {
+      inviteMsg.textContent = "";
+      const email = document.getElementById("inviteEmail").value.trim();
+
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        inviteMsg.textContent = "Not logged in.";
+        return;
+      }
+
+      const res = await fetch(FUNCTIONS_BASE + "/invite-user", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${session.access_token}`
+        },
+        body: JSON.stringify({ email })
+      });
+
+      const out = await res.json();
+      inviteMsg.textContent = out.ok ? `Invited: ${out.invited}` : `Error: ${out.error}`;
+    });
+
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await supabase.auth.signOut();
+      await refreshUI();
+    });
+
+    // Handle magic-link session on page load + when auth changes
+    supabase.auth.onAuthStateChange(() => refreshUI());
+    refreshUI();
+  </script>
+</body>
+</html>
