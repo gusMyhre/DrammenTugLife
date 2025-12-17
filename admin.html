@@ -83,11 +83,7 @@ if (error || !profile || profile.role !== "admin") {
   return;
 }
 
-       // 🚨 Redirect non-admins away
-  if (!profile || profile.role !== "admin") {
-    window.location.href = "./index.html";
-    return;
-  }  
+
 
       debug.textContent = JSON.stringify(
         { user: session.user.email, profile, error: error?.message }, 
@@ -103,11 +99,12 @@ if (error || !profile || profile.role !== "admin") {
       authMsg.textContent = "";
       const email = document.getElementById("loginEmail").value.trim();
 
-      const cleanUrl = window.location.origin + window.location.pathname; // removes #tokens
+      // const cleanUrl = window.location.origin + window.location.pathname; // removes #tokens
 
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: cleanUrl }
+        options: { emailRedirectTo: "https://gusmyhre.github.io/DrammenTugLife/admin.html" }
+
       });
 
       authMsg.textContent = error ? error.message : "Magic link sent (check spam too).";

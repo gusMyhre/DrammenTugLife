@@ -1,0 +1,171 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Join ATL</title>
+
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 480px;
+      margin: 60px auto;
+      padding: 0 16px;
+    }
+
+    h1 {
+      margin-bottom: 8px;
+    }
+
+    .muted {
+      opacity: 0.7;
+      margin-bottom: 24px;
+    }
+
+    .card {
+      border: 1px solid #333;
+      border-radius: 14px;
+      padding: 20px;
+    }
+
+    label {
+      display: block;
+      margin-top: 14px;
+      margin-bottom: 4px;
+      font-weight: 500;
+    }
+
+    input {
+      width: 100%;
+      font-size: 16px;
+      padding: 10px 12px;
+      border-radius: 8px;
+      border: 1px solid #999;
+    }
+
+    button {
+      margin-top: 20px;
+      width: 100%;
+      font-size: 16px;
+      padding: 12px;
+      border-radius: 10px;
+      border: none;
+      cursor: pointer;
+      background: #111;
+      color: #fff;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .msg {
+      margin-top: 16px;
+      min-height: 20px;
+    }
+
+    .error {
+      color: #b00020;
+    }
+
+    .success {
+      color: #0a7a2f;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Join ATL</h1>
+  <p class="muted">Create your profile to join.</p>
+
+  <div class="card">
+    <label>Email</label>
+    <input id="email" type="email" placeholder="you@email.com" />
+
+    <label>Password</label>
+    <input id="password" type="password" placeholder="Choose a password" />
+
+    <label>Nickname</label>
+    <input id="nickname" type="text" placeholder="What should we call you?" />
+
+    <button id="joinBtn">Create account</button>
+
+    <div id="msg" class="msg"></div>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    // 🔧 CHANGE THESE TWO VALUES
+    const SUPABASE_URL = "https://mzfonlfsfwvnkqqvrfzw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0";
+
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const msg = document.getElementById("msg");
+    const btn = document.getElementById("joinBtn");
+
+    btn.addEventListener("click", async () => {
+      msg.textContent = "";
+      msg.className = "msg";
+
+      const email = document.getElementById("email").value.trim().toLowerCase();
+      const password = document.getElementById("password").value;
+      const nickname = document.getElementById("nickname").value.trim();
+
+      if (!email || !password || !nickname) {
+        msg.textContent = "Please fill in all fields.";
+        msg.classList.add("error");
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = "Creating account…";
+
+      try {
+        // 1) Call Edge Function to create account (invite-only)
+        const res = await fetch(SUPABASE_URL + "/functions/v1/create-account", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password, nickname })
+        });
+
+        const out = await res.json();
+
+        if (!res.ok) {
+          msg.textContent = out.error || "Failed to create account.";
+          msg.classList.add("error");
+          return;
+        }
+
+        // 2) Log user in immediately
+        const { error: loginErr } = await supabase.auth.signInWithPassword({
+          email,
+          password
+        });
+
+        if (loginErr) {
+          msg.textContent = loginErr.message;
+          msg.classList.add("error");
+          return;
+        }
+
+        msg.textContent = "Account created! Redirecting…";
+        msg.classList.add("success");
+
+        // 3) Go to main site
+        setTimeout(() => {
+          window.location.href = "./index.html";
+        }, 600);
+
+      } catch (e) {
+        msg.textContent = String(e);
+        msg.classList.add("error");
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Create account";
+      }
+    });
+  </script>
+</body>
+</html>
