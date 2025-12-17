@@ -1,70 +1,94 @@
 import { serve } from "https://deno.land/std@0.224.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const json = (body: unknown, status = 200) =>
-new Response(JSON.stringify(body), {
-status,
-headers: { "Content-Type": "application/json" },
-});
+const allowedOrigins = new Set([
+"https://gusmyhre.github.io",
+"http://localhost:5173",
+"http://localhost:3000",
+]);
+
+function corsHeaders(req: Request) {
+const origin = req.headers.get("origin") ?? "";
+const allowOrigin = allowedOrigins.has(origin) ? origin : "https://gusmyhre.github.io";
+
+return {
+"Access-Control-Allow-Origin": allowOrigin,
+"Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+"Access-Control-Allow-Methods": "POST, OPTIONS",
+"Access-Control-Allow-Credentials": "true",
+"Vary": "Origin",
+"Content-Type": "application/json",
+};
+}
+
+function json(req: Request, body: unknown, status = 200) {
+return new Response(JSON.stringify(body), { status, headers: corsHeaders(req) });
+}
 
 serve(async (req) => {
+// ✅ Handle CORS preflight
+if (req.method === "OPTIONS") {
+return new Response(null, { status: 204, headers: corsHeaders(req) });
+}
+
 try {
-if (req.method !== "POST") return json({ error: "Use POST" }, 405);
+if (req.method !== "POST") return json(req, { error: "Use POST" }, 405);
 
+  const { email, password, nickname } = await req.json().catch(() => ({}));
 
-const { email, password, nickname } = await req.json().catch(() => ({}));
+  if (!email || typeof email !== "string") return json(req, { error: "Missing email" }, 400);
+  if (!password || typeof password !== "string") return json(req, { error: "Missing password" }, 400);
+  if (!nickname || typeof nickname !== "string") return json(req, { error: "Missing nickname" }, 400);
 
-if (!email || typeof email !== "string") return json({ error: "Missing email" }, 400);
-if (!password || typeof password !== "string") return json({ error: "Missing password" }, 400);
-if (!nickname || typeof nickname !== "string") return json({ error: "Missing nickname" }, 400);
+  const url = Deno.env.get("SUPABASE_URL");
+  const serviceKey = Deno.env.get("SERVICE_ROLE_KEY");
+  if (!url || !serviceKey) return json(req, { error: "Missing env" }, 500);
 
-const url = Deno.env.get("SUPABASE_URL");
-const serviceKey = Deno.env.get("SERVICE_ROLE_KEY");
-if (!url || !serviceKey) return json({ error: "Missing env" }, 500);
+  const admin = createClient(url, serviceKey);
 
-const admin = createClient(url, serviceKey);
+  const normEmail = email.trim().toLowerCase();
 
-// 1) Check allowlist
-const { data: invite, error: invErr } = await admin
-  .from("invites")
-  .select("email, used")
-  .eq("email", email.toLowerCase())
-  .single();
+  // 1) Check allowlist
+  const { data: invite, error: invErr } = await admin
+    .from("invites")
+    .select("email, used")
+    .eq("email", normEmail)
+    .single();
 
-if (invErr || !invite) return json({ error: "Not invited" }, 403);
-if (invite.used) return json({ error: "Invite already used" }, 409);
+  if (invErr || !invite) return json(req, { error: "Not invited" }, 403);
+  if (invite.used) return json(req, { error: "Invite already used" }, 409);
 
-// 2) Create auth user (email+password)
-const { data: created, error: createErr } = await admin.auth.admin.createUser({
-  email: email.toLowerCase(),
-  password,
-  email_confirm: true, // skip email confirmation since you invited them
-});
+  // 2) Create auth user
+  const { data: created, error: createErr } = await admin.auth.admin.createUser({
+    email: normEmail,
+    password,
+    email_confirm: true,
+  });
 
-if (createErr) return json({ error: createErr.message }, 400);
-const user = created.user;
-if (!user) return json({ error: "User not created" }, 500);
+  if (createErr) return json(req, { error: createErr.message }, 400);
+  const user = created.user;
+  if (!user) return json(req, { error: "User not created" }, 500);
 
-// 3) Create profile row (adjust fields to your schema)
-const { error: profErr } = await admin.from("profiles").insert({
-  user_id: user.id,
-  nickname,
-  role: "user",
-  coins: 0,
-});
+  // 3) Create profile
+  const { error: profErr } = await admin.from("profiles").insert({
+    user_id: user.id,
+    nickname,
+    role: "user",
+    coins: 0,
+  });
 
-if (profErr) return json({ error: profErr.message }, 400);
+  if (profErr) return json(req, { error: profErr.message }, 400);
 
-// 4) Mark invite used
-await admin
-  .from("invites")
-  .update({ used: true, used_at: new Date().toISOString() })
-  .eq("email", email.toLowerCase());
+  // 4) Mark invite used
+  await admin
+    .from("invites")
+    .update({ used: true, used_at: new Date().toISOString() })
+    .eq("email", normEmail);
 
-return json({ ok: true }, 200);
+  return json(req, { ok: true }, 200);
 
 
 } catch (e) {
-return json({ error: String(e) }, 500);
+return json(req, { error: String(e) }, 500);
 }
 });
