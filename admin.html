@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Flappy Boys Admin</title>
+  <title>ATL Admin</title>
   <style>
     body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
     .card { border: 1px solid #333; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
@@ -29,12 +29,14 @@
   <div class="card" id="inviteCard" style="display:none;">
     <h2>Invite a user</h2>
     <div class="row">
-      <div>
-        <label>Email</label>
-        <input id="inviteEmail" type="email" placeholder="friend@email.com" />
-      </div>
-      <button id="inviteBtn">Invite</button>
-    </div>
+  <div>
+    <label>Email</label>
+    <input id="inviteEmail" type="email" placeholder="friend@email.com" />
+  </div>
+  <button id="inviteBtn">Invite</button>
+  <button id="resendBtn">Resend</button>
+</div>
+
     <p id="inviteMsg"></p>
 
     <hr />
@@ -74,7 +76,24 @@
         .eq("user_id", session.user.id)
         .single();
 
-      debug.textContent = JSON.stringify({ user: session.user.email, profile, error: error?.message }, null, 2);
+
+        // If profile can't be read OR user isn't admin → bounce to index
+if (error || !profile || profile.role !== "admin") {
+  window.location.href = "./index.html";
+  return;
+}
+
+       // 🚨 Redirect non-admins away
+  if (!profile || profile.role !== "admin") {
+    window.location.href = "./index.html";
+    return;
+  }  
+
+      debug.textContent = JSON.stringify(
+        { user: session.user.email, profile, error: error?.message }, 
+          null, 
+          2
+        );
 
       authCard.style.display = "none";
       inviteCard.style.display = "";
@@ -84,9 +103,11 @@
       authMsg.textContent = "";
       const email = document.getElementById("loginEmail").value.trim();
 
+      const cleanUrl = window.location.origin + window.location.pathname; // removes #tokens
+
       const { error } = await supabase.auth.signInWithOtp({
         email,
-        options: { emailRedirectTo: window.location.href }
+        options: { emailRedirectTo: cleanUrl }
       });
 
       authMsg.textContent = error ? error.message : "Magic link sent (check spam too).";
@@ -108,12 +129,42 @@
           "Content-Type": "application/json",
           "Authorization": `Bearer ${session.access_token}`
         },
-        body: JSON.stringify({ email })
+        body: JSON.stringify({ email, mode: "invite" })
       });
 
       const out = await res.json();
       inviteMsg.textContent = out.ok ? `Invited: ${out.invited}` : `Error: ${out.error}`;
     });
+
+    document.getElementById("resendBtn").addEventListener("click", async () => {
+  inviteMsg.textContent = "";
+  const email = document.getElementById("inviteEmail").value.trim();
+
+  if (!email) {
+    inviteMsg.textContent = "Enter an email first.";
+    return;
+  }
+
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session) {
+    inviteMsg.textContent = "Not logged in.";
+    return;
+  }
+
+  const res = await fetch(FUNCTIONS_BASE + "/invite-user", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": `Bearer ${session.access_token}`
+    },
+    body: JSON.stringify({ email, mode: "resend" })
+  });
+
+  const out = await res.json();
+  inviteMsg.textContent = out.ok
+    ? `Link resent to ${email}`
+    : `Error: ${out.error}`;
+});
 
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       await supabase.auth.signOut();
