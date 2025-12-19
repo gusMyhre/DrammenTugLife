@@ -24,29 +24,59 @@
   </div>
 
   <script type="module">
-    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-    const SUPABASE_URL = "https://mzfonlfsfwvnkqqvrfzw.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0";
+  const SUPABASE_URL = "https://mzfonlfsfwvnkqqvrfzw.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0";
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const msg = document.getElementById("msg");
+  const msg = document.getElementById("msg");
 
-    function setMsg(text, ok=false){
-      msg.textContent = text;
-      msg.className = "msg " + (ok ? "success" : "error");
-    }
+  function setMsg(text, ok=false){
+    msg.textContent = text;
+    msg.className = "msg " + (ok ? "success" : "error");
+  }
 
-    document.getElementById("saveBtn").addEventListener("click", async () => {
-      const password = document.getElementById("newPass").value;
-      if (!password) return setMsg("Enter a new password.");
+  // ✅ IMPORTANT: Supabase puts tokens in the URL fragment/hash.
+  // supabase-js will read them on page load and create a session.
+  async function ensureRecoverySession() {
+    // Let supabase-js process the URL hash tokens if present
+    const { data, error } = await supabase.auth.getSession();
+    if (error) return { ok: false, error: error.message };
 
-      const { error } = await supabase.auth.updateUser({ password });
-      if (error) return setMsg(error.message);
+    if (data.session) return { ok: true };
 
-      setMsg("Password updated! Going to index…", true);
-      setTimeout(() => window.location.href = "./index.html", 600);
-    });
-  </script>
+    // If no session, try reading the URL type
+    const hash = window.location.hash || "";
+    const params = new URLSearchParams(hash.startsWith("#") ? hash.slice(1) : hash);
+    const type = params.get("type"); // recovery / magiclink / etc
+
+    return { ok: false, error: type === "recovery"
+      ? "Recovery link opened, but session not created. Check Redirect URLs allowlist and try again."
+      : "Auth session missing! Open the reset link directly from the email on this device/browser." };
+  }
+
+  document.getElementById("saveBtn").addEventListener("click", async () => {
+    const password = document.getElementById("newPass").value;
+    if (!password) return setMsg("Enter a new password.");
+
+    const check = await ensureRecoverySession();
+    if (!check.ok) return setMsg(check.error);
+
+    const { error } = await supabase.auth.updateUser({ password });
+    if (error) return setMsg(error.message);
+
+    setMsg("Password updated! Going to index…", true);
+    // Clean up the URL (removes tokens)
+    history.replaceState({}, document.title, window.location.pathname);
+    setTimeout(() => window.location.href = "./index.html", 700);
+  });
+
+  // On load, show a helpful message if the session is missing
+  const init = await ensureRecoverySession();
+  if (!init.ok) setMsg(init.error);
+  else setMsg("Ready — set a new password below.", true);
+</script>
+
 </body>
 </html>

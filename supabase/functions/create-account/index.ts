@@ -44,7 +44,10 @@ if (req.method !== "POST") return json(req, { error: "Use POST" }, 405);
   const serviceKey = Deno.env.get("SERVICE_ROLE_KEY");
   if (!url || !serviceKey) return json(req, { error: "Missing env" }, 500);
 
-  const admin = createClient(url, serviceKey);
+  const admin = createClient(url, serviceKey, {
+  auth: { persistSession: false },
+  });
+
 
   const normEmail = email.trim().toLowerCase();
 
