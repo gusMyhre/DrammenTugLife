@@ -1,0 +1,79 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Your profile</title>
+  <style>
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 720px; margin: 40px auto; padding: 0 16px; }
+    .card { border: 1px solid #333; border-radius: 14px; padding: 18px; margin: 14px 0; }
+    .muted { opacity: .7; }
+    button { font-size: 14px; padding: 10px 12px; border-radius: 12px; border:0; cursor:pointer; background:#111; color:#fff; }
+    pre { white-space: pre-wrap; }
+  </style>
+</head>
+<body>
+  <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+    <h1 style="margin:0;">Your profile</h1>
+    <div style="display:flex; gap:10px;">
+      <button id="backBtn">Back</button>
+      <button id="logoutBtn">Log out</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 10px;">Stats</h2>
+    <p><b>Email:</b> <span id="email">—</span></p>
+    <p><b>Nickname:</b> <span id="nickname">—</span></p>
+    <p><b>Coins:</b> <span id="coins">—</span></p>
+    <p class="muted" id="roleLine"></p>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 10px;">Scores (coming next)</h2>
+    <p class="muted">We’ll plug your Flappy score + leaderboard in here.</p>
+    <pre id="debug"></pre>
+  </div>
+
+  <script type="module">
+    import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+    const SUPABASE_URL = "https://mzfonlfsfwvnkqqvrfzw.supabase.co";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0";
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+    document.getElementById("backBtn").onclick = () => window.location.href = "./index.html";
+
+    document.getElementById("logoutBtn").onclick = async () => {
+      await supabase.auth.signOut();
+      window.location.href = "./index.html";
+    };
+
+    async function load() {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        window.location.href = "./index.html";
+        return;
+      }
+
+      document.getElementById("email").textContent = session.user.email;
+
+      const { data: profile, error } = await supabase
+        .from("profiles")
+        .select("nickname, coins, role")
+        .eq("user_id", session.user.id)
+        .single();
+
+      document.getElementById("debug").textContent = JSON.stringify({ profile, error: error?.message }, null, 2);
+
+      if (profile) {
+        document.getElementById("nickname").textContent = profile.nickname ?? "—";
+        document.getElementById("coins").textContent = profile.coins ?? 0;
+        document.getElementById("roleLine").textContent = "Role: " + (profile.role ?? "user");
+      }
+    }
+
+    load();
+  </script>
+</body>
+</html>

@@ -178,6 +178,40 @@
   </style>
 </head>
 <body>
+  <!-- Top-right actions -->
+<div id="topRight" style="position:fixed; top:14px; right:14px; z-index:9999; display:flex; gap:10px;"></div>
+
+<!-- Login card (shown only when logged out) -->
+<div id="loginCard" style="max-width:520px; margin:20px auto; padding:0 16px; display:none;">
+  <div style="border:1px solid #333; border-radius:14px; padding:18px;">
+    <h2 style="margin:0 0 10px;">Log in</h2>
+
+    <label style="display:block;margin-top:10px;font-weight:600;">Email</label>
+    <input id="idxEmail" type="email" placeholder="you@email.com"
+      style="width:100%;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid #999;" />
+
+    <label style="display:block;margin-top:12px;font-weight:600;">Password</label>
+    <input id="idxPass" type="password" placeholder="your password"
+      style="width:100%;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid #999;" />
+
+    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:12px;">
+      <button id="idxLoginBtn"
+        style="font-size:16px;padding:12px;border-radius:12px;border:0;cursor:pointer;background:#111;color:#fff;">
+        Log in
+      </button>
+
+      <button id="idxResetBtn"
+        style="font-size:16px;padding:12px;border-radius:12px;border:0;cursor:pointer;background:#222;color:#fff;">
+        Reset
+      </button>
+    </div>
+
+    <p id="idxMsg" style="min-height:22px;margin-top:10px;"></p>
+    <p style="opacity:.7;margin:10px 0 0;">No account? <a href="./join.html">Join here</a></p>
+  </div>
+</div>
+
+
   <div class="container">
     <h1>Flappy Boys</h1>
     <p class="subtitle">Blåtur countdown &amp; secret game for the boys 🐦</p>
@@ -546,5 +580,87 @@
     resetGame();
     draw();
   </script>
+  <script type="module">
+  import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+
+  const SUPABASE_URL = "https://mzfonlfsfwvnkqqvrfzw.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0";
+
+  const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  const loginCard = document.getElementById("loginCard");
+  const topRight = document.getElementById("topRight");
+  const idxMsg = document.getElementById("idxMsg");
+
+  function setMsg(text, ok = false) {
+    idxMsg.textContent = text;
+    idxMsg.style.color = ok ? "#0a7a2f" : "#b00020";
+  }
+
+  function makeBtn(text, onClick) {
+    const b = document.createElement("button");
+    b.textContent = text;
+    b.style.cssText =
+      "font-size:14px;padding:10px 12px;border-radius:12px;border:0;cursor:pointer;background:#111;color:#fff;";
+    b.onclick = onClick;
+    return b;
+  }
+
+  async function refreshAuthUI() {
+    const { data: { session } } = await supabase.auth.getSession();
+
+    topRight.innerHTML = "";
+
+    if (!session) {
+      loginCard.style.display = "";
+      return;
+    }
+
+    // Logged in:
+    loginCard.style.display = "none";
+
+    // Profile button
+    topRight.appendChild(makeBtn("Your profile", () => {
+      window.location.href = "./profile.html";
+    }));
+
+    // Logout button
+    topRight.appendChild(makeBtn("Log out", async () => {
+      await supabase.auth.signOut();
+      await refreshAuthUI();
+    }));
+  }
+
+  document.getElementById("idxLoginBtn").addEventListener("click", async () => {
+    setMsg("");
+    const email = document.getElementById("idxEmail").value.trim().toLowerCase();
+    const password = document.getElementById("idxPass").value;
+
+    if (!email || !password) return setMsg("Enter email + password.");
+
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) return setMsg(error.message);
+
+    setMsg("Logged in!", true);
+    await refreshAuthUI();
+  });
+
+  document.getElementById("idxResetBtn").addEventListener("click", async () => {
+    setMsg("");
+    const email = document.getElementById("idxEmail").value.trim().toLowerCase();
+    if (!email) return setMsg("Enter your email first.");
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: "https://gusmyhre.github.io/DrammenTugLife/reset.html"
+    });
+
+    if (error) return setMsg(error.message);
+    setMsg("Reset email sent (check spam).", true);
+  });
+
+  supabase.auth.onAuthStateChange(() => refreshAuthUI());
+  refreshAuthUI();
+</script>
+
 </body>
 </html>

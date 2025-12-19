@@ -4,82 +4,28 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Join ATL</title>
-
   <style>
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      max-width: 480px;
-      margin: 60px auto;
-      padding: 0 16px;
-    }
-
-    h1 {
-      margin-bottom: 8px;
-    }
-
-    .muted {
-      opacity: 0.7;
-      margin-bottom: 24px;
-    }
-
-    .card {
-      border: 1px solid #333;
-      border-radius: 14px;
-      padding: 20px;
-    }
-
-    label {
-      display: block;
-      margin-top: 14px;
-      margin-bottom: 4px;
-      font-weight: 500;
-    }
-
-    input {
-      width: 100%;
-      font-size: 16px;
-      padding: 10px 12px;
-      border-radius: 8px;
-      border: 1px solid #999;
-    }
-
-    button {
-      margin-top: 20px;
-      width: 100%;
-      font-size: 16px;
-      padding: 12px;
-      border-radius: 10px;
-      border: none;
-      cursor: pointer;
-      background: #111;
-      color: #fff;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-
-    .msg {
-      margin-top: 16px;
-      min-height: 20px;
-    }
-
-    .error {
-      color: #b00020;
-    }
-
-    .success {
-      color: #0a7a2f;
-    }
+    body { font-family: system-ui, -apple-system, sans-serif; max-width: 560px; margin: 60px auto; padding: 0 16px; }
+    .muted { opacity: .7; }
+    .card { border: 1px solid #333; border-radius: 14px; padding: 18px; margin: 14px 0; }
+    label { display:block; margin-top: 12px; margin-bottom: 4px; font-weight: 600; }
+    input { width:100%; font-size:16px; padding:10px 12px; border-radius:10px; border:1px solid #999; }
+    button { font-size:16px; padding:12px; border-radius:12px; border:0; cursor:pointer; width:100%; margin-top: 12px; }
+    .row2 { display:grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .msg { margin-top: 10px; min-height: 22px; }
+    .error { color:#b00020; }
+    .success { color:#0a7a2f; }
+    hr { border:0; border-top:1px solid #333; opacity:.2; margin: 18px 0; }
   </style>
 </head>
 <body>
 
-  <h1>Join ATL</h1>
-  <p class="muted">Create your profile to join.</p>
+  <h1>Join / Login</h1>
+  <p class="muted">Invite-only create account. If you already have one, just log in.</p>
 
   <div class="card">
+    <h2 style="margin:0 0 10px;">Create account (invite-only)</h2>
+
     <label>Email</label>
     <input id="email" type="email" placeholder="you@email.com" />
 
@@ -89,88 +35,109 @@
     <label>Nickname</label>
     <input id="nickname" type="text" placeholder="What should we call you?" />
 
-    <button id="joinBtn">Create account</button>
+    <button id="createBtn">Create account</button>
 
-    <div id="msg" class="msg"></div>
+    <div id="createMsg" class="msg"></div>
+  </div>
+
+  <div class="card">
+    <h2 style="margin:0 0 10px;">Log in</h2>
+
+    <label>Email</label>
+    <input id="loginEmail" type="email" placeholder="you@email.com" />
+
+    <label>Password</label>
+    <input id="loginPassword" type="password" placeholder="Your password" />
+
+    <div class="row2">
+      <button id="loginBtn">Log in</button>
+      <button id="resetBtn" style="background:#222;">Reset password</button>
+    </div>
+
+    <div id="loginMsg" class="msg"></div>
   </div>
 
   <script type="module">
     import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
-    // 🔧 CHANGE THESE TWO VALUES
     const SUPABASE_URL = "https://mzfonlfsfwvnkqqvrfzw.supabase.co";
-    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0";
+    const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0"; // <-- keep anon key in frontend
 
     const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-    const msg = document.getElementById("msg");
-    const btn = document.getElementById("joinBtn");
 
-    btn.addEventListener("click", async () => {
-      msg.textContent = "";
-      msg.className = "msg";
+    const createMsg = document.getElementById("createMsg");
+    const loginMsg = document.getElementById("loginMsg");
 
+    function setMsg(el, text, ok=false) {
+      el.textContent = text;
+      el.className = "msg " + (ok ? "success" : "error");
+    }
+
+    async function goIndex() {
+      window.location.href = "./index.html";
+    }
+
+    // CREATE (invite-only)
+    document.getElementById("createBtn").addEventListener("click", async () => {
+      createMsg.textContent = "";
       const email = document.getElementById("email").value.trim().toLowerCase();
       const password = document.getElementById("password").value;
       const nickname = document.getElementById("nickname").value.trim();
 
-      if (!email || !password || !nickname) {
-        msg.textContent = "Please fill in all fields.";
-        msg.classList.add("error");
-        return;
-      }
-
-      btn.disabled = true;
-      btn.textContent = "Creating account…";
+      if (!email || !password || !nickname) return setMsg(createMsg, "Fill all fields.");
 
       try {
-        // 1) Call Edge Function to create account (invite-only)
         const res = await fetch(SUPABASE_URL + "/functions/v1/create-account", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json",
-                "apikey": SUPABASE_ANON_KEY,
-                "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
-         },
-            body: JSON.stringify({ email, password, nickname })
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "apikey": SUPABASE_ANON_KEY,
+            "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ email, password, nickname })
         });
-
 
         const out = await res.json().catch(() => ({}));
+        if (!res.ok) return setMsg(createMsg, `Error ${res.status}: ${out.error || "Request failed"}`);
 
-if (!res.ok) {
-  msg.textContent = `Error ${res.status}: ${out.error || "Request failed"}`;
-  msg.classList.add("error");
-  return;
-}
+        // log in after create
+        const { error: loginErr } = await supabase.auth.signInWithPassword({ email, password });
+        if (loginErr) return setMsg(createMsg, loginErr.message);
 
-
-        // 2) Log user in immediately
-        const { error: loginErr } = await supabase.auth.signInWithPassword({
-          email,
-          password
-        });
-
-        if (loginErr) {
-          msg.textContent = loginErr.message;
-          msg.classList.add("error");
-          return;
-        }
-
-        msg.textContent = "Account created! Redirecting…";
-        msg.classList.add("success");
-
-        // 3) Go to main site
-        setTimeout(() => {
-          window.location.href = "./index.html";
-        }, 600);
-
+        setMsg(createMsg, "Account created! Redirecting…", true);
+        setTimeout(goIndex, 500);
       } catch (e) {
-        msg.textContent = String(e);
-        msg.classList.add("error");
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Create account";
+        setMsg(createMsg, String(e));
       }
+    });
+
+    // LOGIN
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      loginMsg.textContent = "";
+      const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+      const password = document.getElementById("loginPassword").value;
+
+      if (!email || !password) return setMsg(loginMsg, "Enter email + password.");
+
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) return setMsg(loginMsg, error.message);
+
+      setMsg(loginMsg, "Logged in! Redirecting…", true);
+      setTimeout(goIndex, 300);
+    });
+
+    // RESET PASSWORD (sends email)
+    document.getElementById("resetBtn").addEventListener("click", async () => {
+      loginMsg.textContent = "";
+      const email = document.getElementById("loginEmail").value.trim().toLowerCase();
+      if (!email) return setMsg(loginMsg, "Enter your email first.");
+
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: "https://gusmyhre.github.io/DrammenTugLife/reset.html"
+      });
+
+      if (error) return setMsg(loginMsg, error.message);
+      setMsg(loginMsg, "Password reset email sent (check spam).", true);
     });
   </script>
 </body>
