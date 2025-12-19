@@ -49,14 +49,18 @@ if (req.method !== "POST") return json(req, { error: "Use POST" }, 405);
   const normEmail = email.trim().toLowerCase();
 
   // 1) Check allowlist
-  const { data: invite, error: invErr } = await admin
-    .from("invites")
-    .select("email, used")
-    .eq("email", normEmail)
-    .single();
+  const { data: invites, error: invErr } = await admin
+  .from("invites")
+  .select("email, used")
+  .eq("email", normEmail)
+  .limit(1);
 
-  if (invErr || !invite) return json(req, { error: "Not invited" }, 403);
-  if (invite.used) return json(req, { error: "Invite already used" }, 409);
+if (invErr) return json(req, { error: `Invite lookup failed: ${invErr.message}` }, 500);
+
+const invite = invites?.[0];
+if (!invite) return json(req, { error: `Not invited: ${normEmail}` }, 403);
+if (invite.used) return json(req, { error: "Invite already used" }, 409);
+
 
   // 2) Create auth user
   const { data: created, error: createErr } = await admin.auth.admin.createUser({

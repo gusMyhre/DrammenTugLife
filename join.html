@@ -130,13 +130,14 @@
           body: JSON.stringify({ email, password, nickname })
         });
 
-        const out = await res.json();
+        const out = await res.json().catch(() => ({}));
 
-        if (!res.ok) {
-          msg.textContent = out.error || "Failed to create account.";
-          msg.classList.add("error");
-          return;
-        }
+if (!res.ok) {
+  msg.textContent = `Error ${res.status}: ${out.error || "Request failed"}`;
+  msg.classList.add("error");
+  return;
+}
+
 
         // 2) Log user in immediately
         const { error: loginErr } = await supabase.auth.signInWithPassword({
