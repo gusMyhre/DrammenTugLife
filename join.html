@@ -125,10 +125,15 @@
       try {
         // 1) Call Edge Function to create account (invite-only)
         const res = await fetch(SUPABASE_URL + "/functions/v1/create-account", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email, password, nickname })
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "apikey": SUPABASE_ANON_KEY,
+                "Authorization": `Bearer ${SUPABASE_ANON_KEY}`,
+         },
+            body: JSON.stringify({ email, password, nickname })
         });
+
 
         const out = await res.json().catch(() => ({}));
 
