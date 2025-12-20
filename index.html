@@ -693,8 +693,10 @@
     return b;
   }
 
-  async function refreshAuthUI() {
-    const { data: { session } } = await supabase.auth.getSession();
+  async function refreshAuthUI(passedSession) {
+    const { data: { session } } = passedSession
+      ? { data: { session: passedSession } }
+      : await supabase.auth.getSession();
 
     topRight.innerHTML = "";
 
@@ -727,11 +729,11 @@
 
     if (!email || !password) return setMsg("Enter email + password.");
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) return setMsg(error.message);
 
     setMsg("Logged in!", true);
-    await refreshAuthUI();
+    await refreshAuthUI(data.session);
   });
 
   document.getElementById("idxResetBtn").addEventListener("click", async () => {
@@ -748,7 +750,7 @@
   });
 
   // Keep UI synced
-  supabase.auth.onAuthStateChange(() => refreshAuthUI());
+  supabase.auth.onAuthStateChange((_event, session) => refreshAuthUI(session));
   refreshAuthUI();
 </script>
 
