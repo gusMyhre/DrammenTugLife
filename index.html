@@ -176,7 +176,7 @@
       text-align: right;
     }
 
-    .hidden { display: none !important; }
+    .is-hidden { display: none !important; }
 
     /* Top-right buttons */
     #topRight{
@@ -271,7 +271,7 @@
 </head>
 <body>
    <!-- Fullscreen AUTH overlay -->
-  <div id="authOverlay" class="auth-overlay">
+  <div id="authOverlay" class="auth-overlay is-hidden">
   <div class="auth-card">
     <h2 style="margin:0 0 10px;">Log in</h2>
 
@@ -295,7 +295,7 @@
 <div id="topRight"></div>
 
 <!-- Your entire page content should be inside this wrapper -->
-<div id="appContent" class="hidden">
+<div id="appContent" class="is-hidden">
 
   <div class="container">
     <h1>Poop Togheter</h1>
@@ -700,14 +700,14 @@
 
     if (!session) {
       // Not logged in => show overlay, hide app
-      authOverlay.classList.remove("hidden");
-      appContent.classList.add("hidden");
+      authOverlay.classList.remove("is-hidden");
+      appContent.classList.add("is-hidden");
       return;
     }
 
     // Logged in => hide overlay, show app
-    authOverlay.classList.add("hidden");
-    appContent.classList.remove("hidden");
+    authOverlay.classList.add("is-hidden");
+    appContent.classList.remove("is-hidden");
 
     // Profile + logout
     topRight.appendChild(makeBtn("Your profile", () => {
