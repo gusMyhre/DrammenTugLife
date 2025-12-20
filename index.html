@@ -176,30 +176,34 @@
       text-align: right;
     }
 
-    .topRight {
+    .top-btn{
+      font-size: 14px;
+      padding: 10px 12px;
+      border-radius: 12px;
+      border: 0;
+      cursor: pointer;
+      background: #111;
+      color: #fff;
+    }
+
+     
+    #topRight{
       position: fixed;
       top: 14px;
       right: 14px;
       z-index: 9999;
-      background: #111;
-      color: #fff;
-      border: none;
-      border-radius: 12px;
-      padding: 10px 14px;
-      cursor: pointer;
-      font-size: 14px;
+      display: flex;
+      gap: 10px;
     }
+
 
   </style>
 </head>
 <body>
- 
-
-  <div class="container">
-    <h1>Poop Togheter</h1>
-     
-    <!-- Top-right actions -->
-    <div id="topRight" ></div>
+   <!-- Top-right actions -->
+    <div id="topRight" >
+      
+    </div>
 
     <!-- Login card (shown only when logged out) -->
     <div id="loginCard" style="max-width:520px; margin:20px auto; padding:0 16px; display:none;">
@@ -230,6 +234,11 @@
         <p style="opacity:.7;margin:10px 0 0;">No account? <a href="./join.html">Join here</a></p>
       </div>
     </div>
+
+  <div class="container">
+    <h1>Poop Togheter</h1>
+     
+   
 
 
     <!-- Replace this with a real image later -->
@@ -277,6 +286,8 @@
   </div>
 
   <script>
+
+
     // ===============================
     // 1) COUNTDOWN (set your date)
     // ===============================
@@ -616,11 +627,11 @@
   function makeBtn(text, onClick) {
     const b = document.createElement("button");
     b.textContent = text;
-    b.style.cssText =
-      "font-size:14px;padding:10px 12px;border-radius:12px;border:0;cursor:pointer;background:#111;color:#fff;";
+    b.className = "top-btn";
     b.onclick = onClick;
     return b;
   }
+
 
   async function refreshAuthUI() {
     const { data: { session } } = await supabase.auth.getSession();
