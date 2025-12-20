@@ -693,10 +693,11 @@
     return b;
   }
 
-  async function refreshAuthUI(passedSession) {
-    const { data: { session } } = passedSession
-      ? { data: { session: passedSession } }
-      : await supabase.auth.getSession();
+  async function refreshAuthUI(sessionArg) {
+    const session =
+      sessionArg !== undefined
+        ? sessionArg
+        : (await supabase.auth.getSession()).data.session;
 
     topRight.innerHTML = "";
 
