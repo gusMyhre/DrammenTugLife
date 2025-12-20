@@ -718,8 +718,18 @@
     }));
 
     topRight.appendChild(makeBtn("Log out", async () => {
-      await supabase.auth.signOut();
-      await refreshAuthUI(null); // force overlay immediately after logout
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.warn("signOut error", e);
+      }
+
+      // Immediately show login overlay even before Supabase finishes clearing session
+      authOverlay.classList.remove("is-hidden");
+      appContent.classList.add("is-hidden");
+      topRight.innerHTML = "";
+
+      await refreshAuthUI(null);
     }));
   }
 
