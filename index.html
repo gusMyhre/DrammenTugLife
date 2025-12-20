@@ -176,6 +176,18 @@
       text-align: right;
     }
 
+    .hidden { display: none !important; }
+
+    /* Top-right buttons */
+    #topRight{
+      position: fixed;
+      top: 14px;
+      right: 14px;
+      z-index: 10000;
+      display: flex;
+      gap: 10px;
+    }
+    
     .top-btn{
       font-size: 14px;
       padding: 10px 12px;
@@ -186,59 +198,108 @@
       color: #fff;
     }
 
-     
-    #topRight{
+    /* Fullscreen auth overlay */
+    .auth-overlay{
       position: fixed;
-      top: 14px;
-      right: 14px;
+      inset: 0;
       z-index: 9999;
+      background: rgba(0,0,0,0.85);
       display: flex;
-      gap: 10px;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
     }
+
+    .auth-card{
+      width: 100%;
+      max-width: 520px;
+      border: 1px solid rgba(255,255,255,0.25);
+      background: #0d1222;
+      border-radius: 16px;
+      padding: 18px;
+    }
+
+    .auth-card label{
+      display: block;
+      margin-top: 12px;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+
+    .auth-card input{
+      width: 100%;
+      font-size: 16px;
+      padding: 10px 12px;
+      border-radius: 10px;
+      border: 1px solid #999;
+    }
+
+    .auth-actions{
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .auth-btn{
+      font-size: 16px;
+      padding: 12px;
+      border-radius: 12px;
+      border: 0;
+      cursor: pointer;
+      background: #111;
+      color: #fff;
+    }
+
+    .auth-btn.secondary{
+      background: #222;
+    }
+
+    .auth-msg{
+      min-height: 22px;
+      margin-top: 10px;
+    }
+
+    .auth-muted{
+      opacity: 0.7;
+      margin: 10px 0 0;
+    }
+
 
 
   </style>
 </head>
 <body>
-   <!-- Top-right actions -->
-    <div id="topRight"></div>
+   <!-- Fullscreen AUTH overlay -->
+  <div id="authOverlay" class="auth-overlay hidden">
+  <div class="auth-card">
+    <h2 style="margin:0 0 10px;">Log in</h2>
 
-    <!-- Login card (shown only when logged out) -->
-    <div id="loginCard" style="max-width:520px; margin:20px auto; padding:0 16px; display:none;">
-      <div style="border:1px solid #333; border-radius:14px; padding:18px;">
-        <h2 style="margin:0 0 10px;">Log in</h2>
+    <label for="idxEmail">Email</label>
+    <input id="idxEmail" type="email" placeholder="you@email.com" autocomplete="email" />
 
-        <label style="display:block;margin-top:10px;font-weight:600;">Email</label>
-        <input id="idxEmail" type="email" placeholder="you@email.com"
-          style="width:100%;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid #999;" />
+    <label for="idxPass">Password</label>
+    <input id="idxPass" type="password" placeholder="your password" autocomplete="current-password" />
 
-        <label style="display:block;margin-top:12px;font-weight:600;">Password</label>
-        <input id="idxPass" type="password" placeholder="your password"
-          style="width:100%;font-size:16px;padding:10px 12px;border-radius:10px;border:1px solid #999;" />
-
-        <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin-top:12px;">
-          <button id="idxLoginBtn"
-            style="font-size:16px;padding:12px;border-radius:12px;border:0;cursor:pointer;background:#111;color:#fff;">
-            Log in
-          </button>
-
-          <button id="idxResetBtn"
-            style="font-size:16px;padding:12px;border-radius:12px;border:0;cursor:pointer;background:#222;color:#fff;">
-            Reset
-          </button>
-        </div>
-
-        <p id="idxMsg" style="min-height:22px;margin-top:10px;"></p>
-        <p style="opacity:.7;margin:10px 0 0;">No account? <a href="./join.html">Join here</a></p>
-      </div>
+    <div class="auth-actions">
+      <button id="idxLoginBtn" class="auth-btn">Log in</button>
+      <button id="idxResetBtn" class="auth-btn secondary">Reset</button>
     </div>
+
+    <p id="idxMsg" class="auth-msg"></p>
+    <p class="auth-muted">No account? <a href="./join.html">Join here</a></p>
+  </div>
+</div>
+
+<!-- Top-right actions (visible only when logged in) -->
+<div id="topRight"></div>
+
+<!-- Your entire page content should be inside this wrapper -->
+<div id="appContent" class="hidden">
 
   <div class="container">
     <h1>Poop Togheter</h1>
      
-   
-
-
     <!-- Replace this with a real image later -->
     <div class="group-image">
       Group photo goes here (add a real image file later)
@@ -282,6 +343,7 @@
         <button id="startGameBtn" class="start-btn">Start / Restart</button>
     </div>
   </div>
+</div> <!-- /#appContent -->
 
   <script>
 
@@ -609,17 +671,18 @@
   import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 
   const SUPABASE_URL = "https://mzfonlfsfwvnkqqvrfzw.supabase.co";
-  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im16Zm9ubGZzZnd2bmtxcXZyZnp3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjQzMTYxMTcsImV4cCI6MjA3OTg5MjExN30.eWqdCcBUoiL4RAtDZZ7ZzTGBF5L9MsjOWY4ZhS0eNH0"; // keep anon key in frontend
 
   const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-  const loginCard = document.getElementById("loginCard");
-  const topRight = document.getElementById("topRight");
-  const idxMsg = document.getElementById("idxMsg");
+  const authOverlay = document.getElementById("authOverlay");
+  const appContent  = document.getElementById("appContent");
+  const topRight    = document.getElementById("topRight");
+  const idxMsg      = document.getElementById("idxMsg");
 
   function setMsg(text, ok = false) {
     idxMsg.textContent = text;
-    idxMsg.style.color = ok ? "#0a7a2f" : "#b00020";
+    idxMsg.style.color = ok ? "#0a7a2f" : "#ff6b6b";
   }
 
   function makeBtn(text, onClick) {
@@ -630,26 +693,27 @@
     return b;
   }
 
-
   async function refreshAuthUI() {
     const { data: { session } } = await supabase.auth.getSession();
 
     topRight.innerHTML = "";
 
     if (!session) {
-      loginCard.style.display = "";
+      // Not logged in => show overlay, hide app
+      authOverlay.classList.remove("hidden");
+      appContent.classList.add("hidden");
       return;
     }
 
-    // Logged in:
-    loginCard.style.display = "none";
+    // Logged in => hide overlay, show app
+    authOverlay.classList.add("hidden");
+    appContent.classList.remove("hidden");
 
-    // Profile button
+    // Profile + logout
     topRight.appendChild(makeBtn("Your profile", () => {
       window.location.href = "./profile.html";
     }));
 
-    // Logout button
     topRight.appendChild(makeBtn("Log out", async () => {
       await supabase.auth.signOut();
       await refreshAuthUI();
@@ -683,9 +747,11 @@
     setMsg("Reset email sent (check spam).", true);
   });
 
+  // Keep UI synced
   supabase.auth.onAuthStateChange(() => refreshAuthUI());
   refreshAuthUI();
 </script>
+
 
 </body>
 </html>
