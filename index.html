@@ -718,7 +718,7 @@
 
     topRight.appendChild(makeBtn("Log out", async () => {
       await supabase.auth.signOut();
-      await refreshAuthUI();
+      await refreshAuthUI(null); // force overlay immediately after logout
     }));
   }
 
